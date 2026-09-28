@@ -1,0 +1,7 @@
+failure_analysis/outputs/
+failure_analysis/data/
+**/__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*

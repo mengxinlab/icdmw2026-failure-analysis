@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""Re-render the manuscript figures with Times New Roman + consecutive numbers.
+
+This is a stopgap renderer. It reproduces each figure *exactly* from the
+``*_source.csv`` files the pipeline already exported under
+``outputs/figures/`` (so no statistics are recomputed and no manuscript number
+changes), but (a) applies the Times New Roman font, (b) writes the figures with
+the consecutive manuscript numbering (the unused disagreement plot no longer
+occupies ``fig3``), and (c) differentiates the risk-coverage line series by
+marker + linestyle so they survive grayscale printing and color-blind readers.
+
+It depends only on numpy/pandas/matplotlib (not scipy/sklearn), so it runs even
+when those compiled libraries are unavailable. Both PNG and vector PDF are
+written, and both are copied to ``../manuscript_icdm/figures/`` (the manuscript
+now includes the PDF versions).
+
+Source CSV (old pipeline name) -> output figure (new consecutive name):
+    fig1_error_cooccurrence_heatmap          -> fig1_error_cooccurrence_heatmap
+    fig2_consensus_failure_by_subgroup       -> fig2_consensus_failure_by_subgroup
+    fig4_high_confidence_error_rates         -> fig3_high_confidence_error_rates
+    fig5_risk_coverage_curve                 -> fig4_risk_coverage_curve
+    fig6_architecture_specific_failure_...   -> fig5_architecture_specific_failure_...
+    fig7_external_shift_if_available         -> fig6_external_shift_if_available
+    fig8_lndb_risk_coverage_curve            -> fig7_lndb_risk_coverage_curve
+"""
+from __future__ import annotations
+
+import shutil
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import matplotlib
+
+matplotlib.use("Agg")
+from matplotlib import font_manager
+import matplotlib.pyplot as plt
+
+ROOT = Path(__file__).resolve().parent
+FIG_SRC = ROOT / "outputs" / "figures"
+TABLE_DIR = ROOT / "outputs" / "tables"
+MANU_FIG = ROOT.parent / "manuscript_icdm" / "figures"
+
+MODELS = ["STU-Net", "EfficientNet-B0", "ResNet-18", "DenseNet-121", "ResNet-50", "Swin-UNETR", "ViT-Base"]
+
+# Consistent (color, marker, linestyle) per referral strategy, shared across the
+# two risk-coverage figures so a strategy looks identical in both.
+STRATEGY_STYLE = {
+    "ensemble_margin": ("#4c78a8", "o", "-"),
+    "STU-Net_margin": ("#f58518", "s", "--"),
+    "EfficientNet-B0_margin": ("#54a24b", "^", "-."),
+    "vote_entropy": ("#e15759", "D", ":"),
+    "random": ("#7f7f7f", "x", (0, (1, 1))),
+    "hard_case_score": ("#b279a2", "v", (0, (3, 1, 1, 1))),
+}
+
+
+def set_times_new_roman() -> None:
+    found = False
+    for name in [
+        "Times New Roman.ttf",
+        "Times New Roman Bold.ttf",
+        "Times New Roman Italic.ttf",
+        "Times New Roman Bold Italic.ttf",
+    ]:
+        p = Path("/System/Library/Fonts/Supplemental") / name
+        if p.exists():
+            font_manager.fontManager.addfont(str(p))
+            found = True
+    serif = (["Times New Roman"] if found else []) + ["Times", "DejaVu Serif", "serif"]
+    matplotlib.rcParams.update(
+        {
+            "font.family": "serif",
+            "font.serif": serif,
+            "mathtext.fontset": "stix",
+            "axes.unicode_minus": False,
+            # Embed real TrueType (Type 42) glyphs, not Type 3 bitmaps, so the
+            # figure PDFs pass IEEE PDF checks and stay searchable.
+            "pdf.fonttype": 42,
+            "ps.fonttype": 42,
+        }
+    )
+    print("Times New Roman registered:", found)
+
+
+def _save(fig, name: str) -> None:
+    out_png = FIG_SRC / name
+    fig.savefig(out_png, bbox_inches="tight")
+    fig.savefig(out_png.with_suffix(".pdf"), bbox_inches="tight")
+    plt.close(fig)
+    shutil.copyfile(out_png, MANU_FIG / name)
+    shutil.copyfile(out_png.with_suffix(".pdf"), (MANU_FIG / name).with_suffix(".pdf"))
+    print("wrote", name, "(png+pdf)")
+
+
+def fig_cooccurrence() -> None:
+    jac = pd.read_csv(FIG_SRC / "fig1_error_cooccurrence_heatmap_source.csv").set_index("model")
+    jac = jac.loc[MODELS, MODELS]
+    cooc = pd.read_csv(TABLE_DIR / "error_cooccurrence_matrix.csv").set_index("model").loc[MODELS, MODELS]
+    diag_error_counts = np.array([int(cooc.loc[m, m]) for m in MODELS])
+    mat = jac.to_numpy(dtype=float)
+    np.fill_diagonal(mat, np.nan)
+    cmap = plt.cm.Blues.copy()
+    cmap.set_bad(color="#f2f2f2")
+    fig, ax = plt.subplots(figsize=(8.0, 6.5), dpi=160)
+    im = ax.imshow(mat, cmap=cmap, vmin=0.0, vmax=np.nanmax(mat))
+    ax.set_xticks(np.arange(len(MODELS)))
+    ax.set_yticks(np.arange(len(MODELS)))
+    ax.set_xticklabels(MODELS, rotation=45, ha="right")
+    ax.set_yticklabels(MODELS)
+    ax.set_title("Pairwise error-set Jaccard overlap")
+    for i in range(len(MODELS)):
+        for j in range(len(MODELS)):
+            if i == j:
+                label, color = f"n={diag_error_counts[i]}", "black"
+            else:
+                label = f"{mat[i, j]:.2f}"
+                color = "white" if mat[i, j] >= 0.38 else "black"
+            ax.text(j, i, label, ha="center", va="center", fontsize=8, color=color)
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label("Jaccard")
+    fig.tight_layout()
+    _save(fig, "fig1_error_cooccurrence_heatmap.png")
+
+
+def fig_subgroups() -> None:
+    plot_df = pd.read_csv(FIG_SRC / "fig2_consensus_failure_by_subgroup_source.csv")
+    overall = float((plot_df["consensus_error_rate"] / plot_df["enrichment_ratio"]).dropna().iloc[0])
+    fig, ax = plt.subplots(figsize=(9, 6.2), dpi=160)
+    ax.barh(plot_df["label"][::-1], plot_df["consensus_error_rate"][::-1], color="#4c78a8")
+    ax.axvline(overall, color="black", linestyle="--", linewidth=1.0, label="overall")
+    ax.set_xlabel("Consensus-error rate")
+    ax.set_title("Subgroups enriched for majority DL failure")
+    ax.legend(frameon=False)
+    fig.tight_layout()
+    _save(fig, "fig2_consensus_failure_by_subgroup.png")
+
+
+def fig_high_conf() -> None:
+    plot = pd.read_csv(FIG_SRC / "fig3_high_confidence_error_rates_source.csv")
+    x = np.arange(len(plot))
+    fp = plot["fp_conf_ge_0.8_n"].to_numpy()
+    fn = plot["fn_conf_ge_0.8_n"].to_numpy()
+    fig, ax = plt.subplots(figsize=(9, 4.8), dpi=160)
+    ax.bar(x, fp, width=0.62, label="false positive", color="#e15759")
+    ax.bar(x, fn, bottom=fp, width=0.62, label="false negative", color="#4e79a7")
+    ax.set_xticks(x)
+    ax.set_xticklabels(plot["model"], rotation=45, ha="right")
+    ax.set_ylabel("High-probability error count")
+    ax.set_title("High-probability errors by FP/FN type")
+    ax.set_ylim(0, max((fp + fn).max() * 1.18, 1))
+    ax.legend(frameon=False)
+    fig.tight_layout()
+    _save(fig, "fig3_high_confidence_error_rates.png")
+
+
+def _risk_coverage(source_csv: str, out_name: str, strategies: list[str], title: str) -> None:
+    table = pd.read_csv(FIG_SRC / source_csv)
+    fig, ax = plt.subplots(figsize=(7.6, 5.0), dpi=160)
+    for strategy in strategies:
+        color, marker, ls = STRATEGY_STYLE[strategy]
+        sub = table[table["referral_strategy"].eq(strategy)].sort_values("coverage")
+        ax.plot(sub["coverage"], sub["auto_error_rate"], color=color, marker=marker,
+                linestyle=ls, linewidth=1.5, markersize=6, label=strategy)
+    ax.set_xlabel("Auto-handled coverage")
+    ax.set_ylabel("Auto-handled error rate")
+    ax.set_title(title)
+    ax.legend(frameon=False, fontsize=8)
+    fig.tight_layout()
+    _save(fig, out_name)
+
+
+def fig_risk_coverage() -> None:
+    _risk_coverage(
+        "fig4_risk_coverage_curve_source.csv",
+        "fig4_risk_coverage_curve.png",
+        ["ensemble_margin", "STU-Net_margin", "EfficientNet-B0_margin", "vote_entropy", "random", "hard_case_score"],
+        "Risk-coverage under selective referral",
+    )
+
+
+def fig_architecture() -> None:
+    plot = pd.read_csv(FIG_SRC / "fig5_architecture_specific_failure_patterns_source.csv")
+    densities = [d for d in ["Solid", "Part-solid", "Ground-glass", "Mixed/other", "Missing", "Not determined"] if d in set(plot["density"])]
+    groups = list(plot["architecture_group"].drop_duplicates())
+    x = np.arange(len(densities))
+    width = 0.8 / max(len(groups), 1)
+    colors = ["#4c78a8", "#f58518", "#54a24b", "#b279a2"]
+    fig, ax = plt.subplots(figsize=(9, 5.2), dpi=160)
+    for i, group in enumerate(groups):
+        vals = []
+        for density in densities:
+            match = plot[plot["architecture_group"].eq(group) & plot["density"].eq(density)]
+            vals.append(float(match["error_rate"].iloc[0]) if len(match) else np.nan)
+        ax.bar(x + (i - (len(groups) - 1) / 2) * width, vals, width=width, label=group, color=colors[i % len(colors)])
+    ax.set_xticks(x)
+    ax.set_xticklabels(densities, rotation=35, ha="right")
+    ax.set_ylabel("Mean model error rate")
+    ax.set_title("Architecture-specific failure patterns by density")
+    ax.legend(frameon=False)
+    fig.tight_layout()
+    _save(fig, "fig5_architecture_specific_failure_patterns.png")
+
+
+def fig_external() -> None:
+    plot = pd.read_csv(FIG_SRC / "fig6_external_shift_if_available_source.csv")
+    x = np.arange(len(plot))
+    fig, ax = plt.subplots(figsize=(9, 5.0), dpi=160)
+    ax.bar(x - 0.18, plot["internal_auc"], width=0.36, label="LUNA25 internal", color="#4c78a8")
+    ax.bar(x + 0.18, plot["external_auc"], width=0.36, label="LNDb external", color="#f58518")
+    ax.set_xticks(x)
+    ax.set_xticklabels(plot["model"], rotation=45, ha="right")
+    ax.set_ylim(0.0, 1.0)
+    ax.set_ylabel("ROC-AUC")
+    ax.set_title("Internal-to-external performance shift")
+    ax.legend(frameon=False)
+    fig.tight_layout()
+    _save(fig, "fig6_external_shift_if_available.png")
+
+
+def fig_lndb_risk_coverage() -> None:
+    _risk_coverage(
+        "fig7_lndb_risk_coverage_curve_source.csv",
+        "fig7_lndb_risk_coverage_curve.png",
+        ["ensemble_margin", "STU-Net_margin", "EfficientNet-B0_margin", "vote_entropy", "random"],
+        "LNDb risk-coverage under label-free referral",
+    )
+
+
+def main() -> None:
+    set_times_new_roman()
+    MANU_FIG.mkdir(parents=True, exist_ok=True)
+    fig_cooccurrence()
+    fig_subgroups()
+    fig_high_conf()
+    fig_risk_coverage()
+    fig_architecture()
+    fig_external()
+    fig_lndb_risk_coverage()
+    print("done")
+
+
+if __name__ == "__main__":
+    main()
