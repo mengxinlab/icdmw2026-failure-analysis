@@ -15,6 +15,7 @@ import pandas as pd
 sys.path.insert(0, str(PACKAGE_ROOT))
 import config
 from utils import MODEL_SLUGS, load_behavior_table, write_table
+from referral import saved_order
 
 
 REFERRAL_PCT = 20
@@ -28,7 +29,7 @@ def referral_summary(
     score: pd.Series,
 ) -> dict[str, float | int | str]:
     k = int(math.ceil(len(df) * REFERRAL_PCT / 100.0))
-    order = score.sort_values(ascending=False).index.to_numpy()
+    order = saved_order(df, cohort, strategy)
     referred_idx = set(order[:k])
     referred = df.loc[[idx for idx in df.index if idx in referred_idx]].copy()
     auto = df.loc[[idx for idx in df.index if idx not in referred_idx]].copy()
@@ -41,17 +42,22 @@ def referral_summary(
     auto_fn = int(pred_auto.eq(0).mul(auto["y_true"].eq(1)).sum())
     auto_tp = int(pred_auto.eq(1).mul(auto["y_true"].eq(1)).sum())
     base_tp = int(pred_all.eq(1).mul(df["y_true"].eq(1)).sum())
+    base_fn = int(pred_all.eq(0).mul(df["y_true"].eq(1)).sum())
+    referred_fn = base_fn - auto_fn
 
     return {
         "cohort": cohort,
         "strategy": strategy,
         "referral_pct": REFERRAL_PCT,
         "referred_n": k,
-        "referred_malignant_n": referred_malignant,
-        "total_malignant_n": total_malignant,
-        "malignancy_capture": referred_malignant / total_malignant if total_malignant else np.nan,
-        "auto_malignant_n": auto_malignant,
+        "referred_positive_label_n": referred_malignant,
+        "total_positive_label_n": total_malignant,
+        "positive_label_capture": referred_malignant / total_malignant if total_malignant else np.nan,
+        "auto_positive_label_n": auto_malignant,
         "auto_false_negative_n": auto_fn,
+        "base_false_negative_n": base_fn,
+        "referred_false_negative_n": referred_fn,
+        "fn_capture": referred_fn / base_fn if base_fn else np.nan,
         "residual_false_negative_rate": auto_fn / auto_malignant if auto_malignant else np.nan,
         "detection_upper_bound": (referred_malignant + auto_tp) / total_malignant if total_malignant else np.nan,
         "base_threshold_sensitivity": base_tp / total_malignant if total_malignant else np.nan,

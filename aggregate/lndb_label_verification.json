@@ -1,0 +1,21 @@
+{
+  "record": "LNDb Dataset v4",
+  "doi": "10.5281/zenodo.8348419",
+  "source_url": "https://zenodo.org/api/records/8348419/files/allNods.csv/content",
+  "official_sha256": "bfdb261199323f86ff2fb96b0ece785955f8c6198b3542c1d076a2a6e576c3b8",
+  "label_field": "allNods.Malignancy",
+  "aggregation": "Official average radiologist suspicion score used as supplied; no new reader averaging",
+  "thresholds": {
+    "negative_max_inclusive": 2,
+    "positive_min_inclusive": 4,
+    "intermediate_excluded": true
+  },
+  "unique_selected": 439,
+  "negative": 365,
+  "positive": 74,
+  "weighted_input_rows": 814,
+  "label_mismatch_n": 0,
+  "id_construction": "LNDbID + '_' + merged within-CT FindingID",
+  "original_sampling_reproduced": false,
+  "pathology_confirmation_established": false
+}

@@ -15,6 +15,7 @@ import pandas as pd
 sys.path.insert(0, str(PACKAGE_ROOT))
 import config
 from utils import MODEL_SLUGS, load_behavior_table, write_table
+from referral import referral_order, referral_scores
 
 
 N_DRAWS = 1000
@@ -23,7 +24,7 @@ REFERRAL_PCT = 20
 
 def referral_auto_error(df: pd.DataFrame, score: pd.Series) -> float:
     k = int(math.ceil(len(df) * REFERRAL_PCT / 100.0))
-    referred = set(score.sort_values(ascending=False).index[:k])
+    referred = set(referral_order(df, score, "LUNA25")[:k])
     auto = df.loc[[idx for idx in df.index if idx not in referred]]
     return float(auto["ensemble_error"].mean())
 
@@ -33,6 +34,7 @@ def metric_values(df: pd.DataFrame, rng: np.random.Generator | None = None) -> d
     values = {
         "majority_consensus_failure_rate": float(df["consensus_error_majority"].mean()),
         "ensemble_error_rate": float(df["ensemble_error"].mean()),
+        "random_expected_20pct_auto_error": float(df["ensemble_error"].mean()),
         "STU-Net_margin_20pct_auto_error": referral_auto_error(
             df, 0.5 - df[f"{MODEL_SLUGS['STU-Net']}_margin"]
         ),
@@ -43,8 +45,8 @@ def metric_values(df: pd.DataFrame, rng: np.random.Generator | None = None) -> d
         "vote_entropy_20pct_auto_error": referral_auto_error(df, df["vote_entropy"]),
     }
     if rng is not None:
-        values["random_20pct_auto_error"] = referral_auto_error(
-            df, pd.Series(rng.random(len(df)), index=df.index)
+        values["random_simulated_20pct_auto_error"] = referral_auto_error(
+            df, referral_scores(df, "LUNA25")["random_simulated"]
         )
     return values
 

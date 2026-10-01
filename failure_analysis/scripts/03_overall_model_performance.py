@@ -34,7 +34,7 @@ def main() -> None:
                 "model": model,
                 "architecture_group": config.MODEL_GROUPS.get(model, "unspecified"),
                 "n": len(sub),
-                "malignant_n": int(sub["y_true"].sum()),
+                "positive_label_n": int(sub["y_true"].sum()),
                 "roc_auc": metrics["roc_auc"],
                 "roc_auc_ci_low": ci[0],
                 "roc_auc_ci_high": ci[1],

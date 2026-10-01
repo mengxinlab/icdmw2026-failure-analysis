@@ -132,6 +132,8 @@ def load_luna25_metadata() -> pd.DataFrame:
     if missing:
         raise ValueError(f"Missing required metadata columns: {missing}")
 
+    if df[config.CASE_ID_COL].isna().any() or df[config.CASE_ID_COL].astype(str).str.strip().eq("").any():
+        raise ValueError("Missing or blank metadata case ID")
     out = df.copy()
     out["case_id"] = out[config.CASE_ID_COL].astype(str)
     out["patient_id"] = pd.to_numeric(out[config.PATIENT_ID_COL], errors="coerce").astype("Int64")
@@ -160,6 +162,8 @@ def load_luna25_metadata() -> pd.DataFrame:
         labels=config.AGE_LABELS,
         right=False,
     ).astype(object).fillna("Missing")
+    if out.groupby("case_id")[["patient_id", "y_true"]].nunique(dropna=False).gt(1).any().any():
+        raise ValueError("Conflicting repeated LUNA25 metadata IDs")
     return out.drop_duplicates("case_id", keep="first")
 
 
@@ -187,6 +191,8 @@ def load_model_predictions(model_name: str) -> pd.DataFrame:
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"{path} is missing required columns: {missing}")
+    if df[config.CASE_ID_COL].isna().any() or df[config.CASE_ID_COL].astype(str).str.strip().eq("").any():
+        raise ValueError(f"Missing or blank prediction case ID in {path}")
     out = pd.DataFrame(
         {
             "case_id": df[config.CASE_ID_COL].astype(str),
@@ -196,7 +202,11 @@ def load_model_predictions(model_name: str) -> pd.DataFrame:
     )
     if config.LOGIT_COLUMN in df.columns:
         out["logit"] = pd.to_numeric(df[config.LOGIT_COLUMN], errors="coerce")
-    return out.drop_duplicates("case_id", keep="last").reset_index(drop=True)
+    if not out["y_true"].isin([0, 1]).all() or not out["p_malignant"].between(0, 1).all():
+        raise ValueError(f"Invalid label or probability in {path}")
+    if out.groupby("case_id")[["y_true", "p_malignant"]].nunique(dropna=False).gt(1).any().any():
+        raise ValueError(f"Conflicting duplicate prediction IDs in {path}")
+    return out.drop_duplicates("case_id", keep="first").reset_index(drop=True)
 
 
 def load_all_luna_predictions_long() -> pd.DataFrame:
@@ -393,7 +403,8 @@ def mcnemar_exact_pvalue(y_true: Iterable[int], p_a: Iterable[float], p_b: Itera
 def vote_entropy(vote_count: float, model_count: float) -> float:
     if not model_count or model_count <= 0:
         return float("nan")
-    p = vote_count / model_count
+    # Complementary vote counts must have exactly identical scores.
+    p = min(vote_count, model_count - vote_count) / model_count
     if p <= 0 or p >= 1:
         return 0.0
     return float(-(p * math.log2(p) + (1 - p) * math.log2(1 - p)))

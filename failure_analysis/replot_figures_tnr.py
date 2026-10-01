@@ -50,7 +50,7 @@ STRATEGY_STYLE = {
     "STU-Net_margin": ("#f58518", "s", "--"),
     "EfficientNet-B0_margin": ("#54a24b", "^", "-."),
     "vote_entropy": ("#e15759", "D", ":"),
-    "random": ("#7f7f7f", "x", (0, (1, 1))),
+    "random_expected": ("#7f7f7f", "x", (0, (1, 1))),
     "hard_case_score": ("#b279a2", "v", (0, (3, 1, 1, 1))),
 }
 
@@ -88,8 +88,9 @@ def _save(fig, name: str) -> None:
     fig.savefig(out_png, bbox_inches="tight")
     fig.savefig(out_png.with_suffix(".pdf"), bbox_inches="tight")
     plt.close(fig)
-    shutil.copyfile(out_png, MANU_FIG / name)
-    shutil.copyfile(out_png.with_suffix(".pdf"), (MANU_FIG / name).with_suffix(".pdf"))
+    if MANU_FIG.is_dir():
+        shutil.copyfile(out_png, MANU_FIG / name)
+        shutil.copyfile(out_png.with_suffix(".pdf"), (MANU_FIG / name).with_suffix(".pdf"))
     print("wrote", name, "(png+pdf)")
 
 
@@ -102,23 +103,25 @@ def fig_cooccurrence() -> None:
     np.fill_diagonal(mat, np.nan)
     cmap = plt.cm.Blues.copy()
     cmap.set_bad(color="#f2f2f2")
-    fig, ax = plt.subplots(figsize=(8.0, 6.5), dpi=160)
+    # Sized for a single IEEE column, so text is readable at final placement.
+    fig, ax = plt.subplots(figsize=(3.5, 3.0), dpi=200)
     im = ax.imshow(mat, cmap=cmap, vmin=0.0, vmax=np.nanmax(mat))
     ax.set_xticks(np.arange(len(MODELS)))
     ax.set_yticks(np.arange(len(MODELS)))
-    ax.set_xticklabels(MODELS, rotation=45, ha="right")
-    ax.set_yticklabels(MODELS)
-    ax.set_title("Pairwise error-set Jaccard overlap")
+    labels = ["STU", "Eff-B0", "Res18", "Dense", "Res50", "Swin", "ViT"]
+    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
+    ax.set_yticklabels(labels, fontsize=8)
     for i in range(len(MODELS)):
         for j in range(len(MODELS)):
             if i == j:
-                label, color = f"n={diag_error_counts[i]}", "black"
+                label, color = f"{diag_error_counts[i]}", "black"
             else:
                 label = f"{mat[i, j]:.2f}"
                 color = "white" if mat[i, j] >= 0.38 else "black"
             ax.text(j, i, label, ha="center", va="center", fontsize=8, color=color)
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label("Jaccard")
+    cbar.set_label("Jaccard", fontsize=8)
+    cbar.ax.tick_params(labelsize=8)
     fig.tight_layout()
     _save(fig, "fig1_error_cooccurrence_heatmap.png")
 
@@ -156,16 +159,19 @@ def fig_high_conf() -> None:
 
 def _risk_coverage(source_csv: str, out_name: str, strategies: list[str], title: str) -> None:
     table = pd.read_csv(FIG_SRC / source_csv)
-    fig, ax = plt.subplots(figsize=(7.6, 5.0), dpi=160)
+    fig, ax = plt.subplots(figsize=(3.5, 2.45), dpi=200)
     for strategy in strategies:
         color, marker, ls = STRATEGY_STYLE[strategy]
         sub = table[table["referral_strategy"].eq(strategy)].sort_values("coverage")
         ax.plot(sub["coverage"], sub["auto_error_rate"], color=color, marker=marker,
-                linestyle=ls, linewidth=1.5, markersize=6, label=strategy)
-    ax.set_xlabel("Auto-handled coverage")
-    ax.set_ylabel("Auto-handled error rate")
-    ax.set_title(title)
-    ax.legend(frameon=False, fontsize=8)
+                linestyle=ls, linewidth=1.2, markersize=3,
+                label={"ensemble_margin":"Ensemble margin", "STU-Net_margin":"STU-Net margin",
+                       "vote_entropy":"Vote entropy", "random_expected":"Random expectation",
+                       "hard_case_score":"Label-informed heuristic"}.get(strategy,strategy))
+    ax.set_xlabel("Auto-handled coverage", fontsize=9)
+    ax.set_ylabel("Auto-handled error", fontsize=9)
+    ax.tick_params(labelsize=8)
+    ax.legend(frameon=False, fontsize=7, loc="upper left")
     fig.tight_layout()
     _save(fig, out_name)
 
@@ -174,7 +180,7 @@ def fig_risk_coverage() -> None:
     _risk_coverage(
         "fig4_risk_coverage_curve_source.csv",
         "fig4_risk_coverage_curve.png",
-        ["ensemble_margin", "STU-Net_margin", "EfficientNet-B0_margin", "vote_entropy", "random", "hard_case_score"],
+        ["ensemble_margin", "STU-Net_margin", "vote_entropy", "random_expected", "hard_case_score"],
         "Risk-coverage under selective referral",
     )
 
@@ -222,14 +228,13 @@ def fig_lndb_risk_coverage() -> None:
     _risk_coverage(
         "fig7_lndb_risk_coverage_curve_source.csv",
         "fig7_lndb_risk_coverage_curve.png",
-        ["ensemble_margin", "STU-Net_margin", "EfficientNet-B0_margin", "vote_entropy", "random"],
+        ["ensemble_margin", "STU-Net_margin", "vote_entropy", "random_expected"],
         "LNDb risk-coverage under label-free referral",
     )
 
 
 def main() -> None:
     set_times_new_roman()
-    MANU_FIG.mkdir(parents=True, exist_ok=True)
     fig_cooccurrence()
     fig_subgroups()
     fig_high_conf()

@@ -10,6 +10,7 @@ from scipy import stats
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config
+from referral import persist_rankings, random_expected_row, referral_order, referral_scores
 from utils import binary_metrics, configure_matplotlib, save_figure_source, vote_entropy, write_table
 
 configure_matplotlib()
@@ -28,13 +29,22 @@ def load_lndb_model(model: str) -> pd.DataFrame:
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"{path} missing required columns: {missing}")
-    return pd.DataFrame(
+    if df["FindingID"].isna().any() or df["FindingID"].astype(str).str.strip().eq("").any():
+        raise ValueError(f"Missing or blank finding ID in {path}")
+    out = pd.DataFrame(
         {
             "finding_id": df["FindingID"].astype(str),
             "y_true": pd.to_numeric(df["label"], errors="coerce"),
             model: pd.to_numeric(df["pred_prob"], errors="coerce"),
         }
-    ).drop_duplicates("finding_id", keep="last")
+    )
+    if out["finding_id"].eq("").any() or not out["y_true"].isin([0, 1]).all() or not out[model].between(0, 1).all():
+        raise ValueError(f"Invalid ID, binary label, or probability in {path}")
+    # Repeated evaluation-sheet rows may collapse only when values agree exactly.
+    conflicts = out.groupby("finding_id")[["y_true", model]].nunique(dropna=False).gt(1).any(axis=1)
+    if conflicts.any():
+        raise ValueError(f"Conflicting duplicate findings in {path}: {conflicts[conflicts].index.tolist()[:5]}")
+    return out.drop_duplicates("finding_id", keep="first")
 
 
 def missing_external() -> bool:
@@ -125,7 +135,7 @@ def bootstrap_referral_intervals(
         sample = base.loc[boot_idx].reset_index(drop=True)
         sample_score = pd.Series(score.loc[boot_idx].to_numpy(), index=sample.index)
         k = int(math.ceil(len(sample) * pct / 100.0))
-        referred_idx = set(sample_score.sort_values(ascending=False).index[:k])
+        referred_idx = set(referral_order(sample, sample_score, "LNDb")[:k])
         auto = sample.loc[[i for i in sample.index if i not in referred_idx]]
         rates = evaluate_auto_rates(auto)
         for key, value in rates.items():
@@ -140,20 +150,11 @@ def bootstrap_referral_intervals(
 
 
 def write_lndb_referral_outputs(base: pd.DataFrame, model_cols: list[str]) -> None:
-    rng = np.random.default_rng(config.RANDOM_SEED + 909)
-    strategies = {
-        "ensemble_margin": 0.5 - base["ensemble_margin"],
-        "STU-Net_margin": 0.5 - base["STU-Net_margin"],
-        "EfficientNet-B0_margin": 0.5 - base["EfficientNet-B0_margin"],
-        "mean_individual_margin": 0.5 - base[[f"{m}_margin" for m in model_cols]].mean(axis=1),
-        "std_p": base["std_p"],
-        "max_p_gap": base["max_p_gap"],
-        "vote_entropy": base["vote_entropy"],
-        "random": pd.Series(rng.random(len(base)), index=base.index),
-    }
+    strategies = referral_scores(base, "LNDb")
+    orders = persist_rankings(base, strategies, "LNDb")
     rows = []
     for strategy, score in strategies.items():
-        order = score.sort_values(ascending=False).index.to_numpy()
+        order = orders[strategy]
         for pct in config.REFERRAL_PCTS:
             k = int(math.ceil(len(base) * pct / 100.0))
             referred_idx = set(order[:k])
@@ -167,6 +168,8 @@ def write_lndb_referral_outputs(base: pd.DataFrame, model_cols: list[str]) -> No
             rows.append(
                 {
                     "referral_strategy": strategy,
+                    "label_free": True,
+                    "statistic": "selected_subset",
                     "referral_pct": pct,
                     "referred_n": k,
                     "auto_n": len(auto),
@@ -175,6 +178,7 @@ def write_lndb_referral_outputs(base: pd.DataFrame, model_cols: list[str]) -> No
                     **ci,
                 }
             )
+    rows.extend(random_expected_row(base, pct) for pct in config.REFERRAL_PCTS)
     table = pd.DataFrame(rows)
     write_table(table, config.TABLE_DIR / "table8_lndb_selective_referral.csv")
 
@@ -183,7 +187,7 @@ def write_lndb_referral_outputs(base: pd.DataFrame, model_cols: list[str]) -> No
         "STU-Net_margin",
         "EfficientNet-B0_margin",
         "vote_entropy",
-        "random",
+        "random_expected",
     ]
     fig, ax = plt.subplots(figsize=(7.6, 5.0), dpi=160)
     for strategy in plot_strategies:
@@ -208,10 +212,32 @@ def main() -> None:
         return
 
     base = None
+    audit = []
     for model in config.LNDB_MODEL_FILES:
         model_df = load_lndb_model(model)
-        base = model_df if base is None else base.merge(model_df, on=["finding_id", "y_true"], how="inner")
+        if base is None:
+            base = model_df
+        else:
+            if set(base["finding_id"]) != set(model_df["finding_id"]):
+                raise ValueError(f"{model}: external ID sets differ; refusing silent inner-join loss")
+            aligned = model_df.set_index("finding_id").loc[base["finding_id"]]
+            if not np.array_equal(base["y_true"].to_numpy(), aligned["y_true"].to_numpy()):
+                raise ValueError(f"{model}: conflicting external labels")
+            base = base.merge(model_df.drop(columns="y_true"), on="finding_id", validate="one_to_one", how="left")
+        audit.append({"model": model, "unique_findings": len(model_df), "id_set_matches": True,
+                      "labels_match": True, "silent_drop_n": 0})
     assert base is not None
+    meta = pd.read_csv(config.LNDB_METADATA_PATH, dtype={"FindingID": str})
+    if meta.groupby("FindingID")[["LNDbID", "label"]].nunique(dropna=False).gt(1).any().any():
+        raise ValueError("Conflicting LNDb metadata duplicates")
+    if meta.groupby("FindingID")["LNDbID"].nunique().gt(1).any():
+        raise ValueError("FindingID is not globally unique across LNDbID")
+    if not meta["FindingID"].str.split("_").str[0].astype(int).eq(meta["LNDbID"]).all():
+        raise ValueError("Composite FindingID does not include LNDbID")
+    meta_unique = meta.drop_duplicates("FindingID").set_index("FindingID")
+    if set(meta_unique.index) != set(base["finding_id"]) or not np.array_equal(meta_unique.loc[base["finding_id"], "label"], base["y_true"]):
+        raise ValueError("External metadata IDs/labels do not match prediction tables")
+    write_table(pd.DataFrame(audit), config.LOG_DIR / "lndb_alignment_checks.csv", latex=False)
     model_cols = list(config.LNDB_MODEL_FILES)
     base["Ensemble mean"] = base[model_cols].mean(axis=1)
     base = add_lndb_behavior_features(base, model_cols)
@@ -226,7 +252,7 @@ def main() -> None:
                 "model": model,
                 "architecture_group": config.MODEL_GROUPS.get(model, "unspecified"),
                 "external_n": len(base),
-                "external_malignant_n": int(base["y_true"].sum()),
+                "external_positive_label_n": int(base["y_true"].sum()),
                 "internal_auc": internal_auc.get(model, np.nan),
                 "external_auc": metrics["roc_auc"],
                 "auc_delta_external_minus_internal": metrics["roc_auc"] - internal_auc.get(model, np.nan),

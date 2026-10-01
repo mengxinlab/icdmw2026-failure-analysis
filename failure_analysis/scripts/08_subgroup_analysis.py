@@ -45,7 +45,7 @@ def main() -> None:
                         "subgroup_family": family,
                         "subgroup": str(level),
                         "n": len(sub),
-                        "malignant_n": int(sub["y_true"].sum()),
+                        "positive_label_n": int(sub["y_true"].sum()),
                         "prevalence": float(sub["y_true"].mean()),
                         "roc_auc": metrics["roc_auc"],
                         "accuracy": metrics["accuracy"],

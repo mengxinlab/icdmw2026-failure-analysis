@@ -21,9 +21,12 @@ SCRIPTS = [
     "07_disagreement_and_selective_referral.py",
     "08_subgroup_analysis.py",
     "09_external_validation_if_available.py",
-    "10_export_paper_tables.py",
     "11_patient_level_sensitivity.py",
     "12_malignancy_aware_referral.py",
+    "13_threshold_and_tie_sensitivity.py",
+    "14_input_manifest.py",
+    "10_export_paper_tables.py",
+    "15_camera_ready_tables.py",
 ]
 
 
@@ -33,6 +36,8 @@ def main() -> None:
     env.setdefault("MPLCONFIGDIR", str(config.OUTPUT_DIR / "mplconfig"))
     env.setdefault("XDG_CACHE_HOME", str(config.OUTPUT_DIR / "mplconfig"))
     env.setdefault("PYTHONDONTWRITEBYTECODE", "1")
+    subprocess.run([sys.executable, str(Path(__file__).resolve().parent/"verify_lndb_labels.py")],
+                   cwd=config.PROJECT_ROOT,env=env,check=True)
     script_dir = Path(__file__).resolve().parent / "scripts"
     for script in SCRIPTS:
         path = script_dir / script

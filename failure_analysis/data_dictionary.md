@@ -32,7 +32,7 @@ Across-model fields include `model_count`, `error_count`, `mean_p`, `std_p`,
 
 `hard_case_score` includes observed `error_count` and high-probability error
 counts, so it is a retrospective audit score. Use `std_p`, `max_p_gap`,
-`vote_entropy`, model margin, or ensemble margin for deployment-eligible
+`vote_entropy`, model margin, or ensemble margin for label-free
 referral simulations.
 
 ## Clinical Metadata

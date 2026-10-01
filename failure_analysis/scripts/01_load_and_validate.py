@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -91,6 +92,18 @@ def main() -> None:
     )
 
     per_model_counts = preds.groupby("model")["case_id"].nunique().sort_index()
+    sets = [set(g["case_id"]) for _, g in preds.groupby("model")]
+    if any(ids != sets[0] for ids in sets[1:]):
+        raise ValueError("LUNA25 prediction ID sets differ across models")
+    checks.append({"check": "identical_model_id_sets", "status": "PASS", "detail": f"{len(sets[0])} IDs shared by all seven models"})
+    split = json.loads(config.PATIENT_SPLIT_PATH.read_text())
+    groups = {name: set(map(int, split[name])) for name in ["train", "val", "test"]}
+    if any(groups[a] & groups[b] for a, b in [("train", "val"), ("train", "test"), ("val", "test")]):
+        raise ValueError("Patient split lists overlap")
+    if set(test_meta["patient_id"].astype(int)) != groups["test"]:
+        raise ValueError("Prediction patients do not match the test split")
+    checks.append({"check": "patient_split_disjointness", "status": "PASS",
+                   "detail": "; ".join(f"{name}={len(ids)}" for name, ids in groups.items()) + "; overlap=0"})
     checks.append(
         {
             "check": "per_model_case_counts",
@@ -137,6 +150,8 @@ def main() -> None:
 
     checks_df = pd.DataFrame(checks)
     write_table(checks_df, config.LOG_DIR / "validation_checks.csv", latex=False)
+    if checks_df["status"].eq("FAIL").any():
+        raise ValueError("Input validation failed; see outputs/logs/validation_checks.csv")
 
     report_lines = [
         "# Validation report",

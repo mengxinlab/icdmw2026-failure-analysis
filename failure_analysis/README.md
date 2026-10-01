@@ -37,12 +37,15 @@ source-data repository on another machine. The code does not distribute CT
 images, clinical metadata, or per-case prediction files.
 
 For a standalone public code repository, include the scripts, configuration,
-requirements, and documentation only. The local `outputs/` directory contains
+requirements, documentation, and reviewed aggregate exports only. The local `outputs/` directory contains
 case-level derivatives and machine-specific logs and must not be published;
 the `.gitignore` excludes it for a new repository. If publishing from this
 existing project repository, first verify its tracked-file list because
 `.gitignore` does not remove files already tracked by Git. Users must obtain
 source metadata and prediction files separately under their dataset terms.
+Study-generated predictions are not available from dataset websites. Exact
+numerical reproduction requires the hash-matching private inputs; see the
+public release's `ARTIFACTS.md` and `aggregate/input_manifest.json`.
 
 ## Primary Inputs
 
@@ -88,5 +91,22 @@ source metadata and prediction files separately under their dataset terms.
 10. `10_export_paper_tables.py`: writes manuscript-oriented summaries.
 11. `11_patient_level_sensitivity.py`: repeats key analyses after sampling
    one annotation per patient.
-12. `12_malignancy_aware_referral.py`: exports malignancy-capture and
-   residual false-negative referral metrics.
+12. `12_malignancy_aware_referral.py`: exports positive-label capture, FN capture,
+   and residual false-negative referral metrics using persisted rankings.
+13. `13_threshold_and_tie_sensitivity.py`: exports the complete fixed-ranking
+   threshold grid (0.3, 0.5, 0.7) and all 100 consecutive tie seeds.
+14. `14_input_manifest.py`: hashes inputs and exports aggregate validation
+   evidence; individual missed-case mappings remain local.
+15. `15_camera_ready_tables.py`: generates manuscript rows from canonical CSVs.
+
+Before these steps, `verify_lndb_labels.py` checks proxy labels against the
+hash-pinned official LNDb v4 `allNods.csv` (average radiologist suspicion score
+<=2 negative, >=4 positive, intermediate scores excluded). Set
+`FAILURE_ANALYSIS_LNDB_OFFICIAL_CSV` to a local official copy for offline use.
+The original ROI selection process was not recovered; this verifies labels,
+not pathology or historical image extraction.
+
+Referral ties use stable-ID SHA256 ordering with fixed seed 20260530;
+`random_expected` is analytical and `random_simulated` is separate. Ranking
+files are persisted locally and shared by downstream scripts. The
+label-informed hard-case heuristic is not an optimal oracle bound.

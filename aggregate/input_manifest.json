@@ -1,0 +1,406 @@
+{
+  "python": "3.13.9",
+  "packages": {
+    "numpy": "2.1.3",
+    "pandas": "2.2.3",
+    "scipy": "1.15.3",
+    "scikit-learn": "1.6.1",
+    "matplotlib": "3.10.0",
+    "jinja2": "3.1.6"
+  },
+  "referral_tie_seed": 20260530,
+  "threshold_grid": [
+    0.3,
+    0.5,
+    0.7
+  ],
+  "split_patient_counts": {
+    "train": 1484,
+    "val": 318,
+    "test": 318
+  },
+  "unanimous_positive_summary": {
+    "annotations": 4,
+    "nodules": 2,
+    "patients": 2
+  },
+  "inputs": [
+    {
+      "path_relative_to_source_root": "data/metadata/luna25_clinical_metadata.csv",
+      "sha256": "af62eeb07a84e3ecdea043ad833c0b97daf85e2d55ce907731286fcbd6548b96",
+      "bytes": 404394,
+      "rows": 6163,
+      "columns": [
+        "PatientID",
+        "AnnotationID",
+        "label",
+        "Age_at_StudyDate",
+        "Gender",
+        "sct_ab_desc",
+        "sct_epi_loc",
+        "sct_long_dia",
+        "sct_margins",
+        "sct_perp_dia",
+        "sct_pre_att",
+        "race",
+        "cigsmok",
+        "ctdxqual"
+      ],
+      "unique_id_count": 6163
+    },
+    {
+      "path_relative_to_source_root": "data/metadata/luna25_public_training_development_data.csv",
+      "sha256": "9818a62f1069f9b549a5343ff21762a834c06b4c7a1d4557f9c7d6c6648eed7a",
+      "bytes": 860931,
+      "rows": 6163,
+      "columns": [
+        "PatientID",
+        "SeriesInstanceUID",
+        "StudyDate",
+        "CoordX",
+        "CoordY",
+        "CoordZ",
+        "LesionID",
+        "AnnotationID",
+        "NoduleID",
+        "label",
+        "Age_at_StudyDate",
+        "Gender"
+      ],
+      "unique_id_count": 6163
+    },
+    {
+      "path_relative_to_source_root": "data/metadata/luna25_nlst_merged_v2.csv",
+      "sha256": "cb9c699d7cd81d1c22b34b57fcb57ee38378741e8be7569e4e4f13a4d777da8e",
+      "bytes": 1928804,
+      "rows": 6163,
+      "columns": [
+        "PatientID",
+        "SeriesInstanceUID",
+        "StudyDate",
+        "CoordX",
+        "CoordY",
+        "CoordZ",
+        "LesionID",
+        "AnnotationID",
+        "NoduleID",
+        "label",
+        "Age_at_StudyDate",
+        "Gender",
+        "study_yr",
+        "sct_ab_num",
+        "sct_ab_desc",
+        "sct_epi_loc",
+        "sct_long_dia",
+        "sct_margins",
+        "sct_perp_dia",
+        "sct_pre_att",
+        "sct_slice_num",
+        "sct_found_after_comp",
+        "sct_ab_preexist",
+        "sct_ab_attn",
+        "sct_ab_gwth",
+        "sct_ab_invg",
+        "visible_days",
+        "race",
+        "cigsmok",
+        "loclhil",
+        "locllow",
+        "loclup",
+        "locrhil",
+        "locrlow",
+        "locrmid",
+        "locunk",
+        "locrup",
+        "locoth",
+        "locmed",
+        "loclmsb",
+        "locrmsb",
+        "loccar",
+        "loclin",
+        "scr_res0",
+        "scr_res1",
+        "scr_res2",
+        "scr_iso0",
+        "scr_iso1",
+        "scr_iso2",
+        "cancyr",
+        "can_scr",
+        "canc_rpt_link",
+        "scr_days0",
+        "scr_days1",
+        "scr_days2",
+        "candx_days",
+        "canc_free_days",
+        "lc_topog",
+        "topog_source",
+        "de_type",
+        "de_grade",
+        "de_stag",
+        "path_stag",
+        "clinical_stag",
+        "stage_sum",
+        "valcsg",
+        "clinical_t_7thed",
+        "clinical_n_7thed",
+        "clinical_m_7thed",
+        "path_t_7thed",
+        "path_n_7thed",
+        "path_m_7thed",
+        "de_stag_7thed",
+        "first_lc",
+        "canc_lesionsize",
+        "lc_morph",
+        "lc_behav",
+        "lc_grade",
+        "ctdxqual",
+        "techpara_kvp",
+        "techpara_ma",
+        "techpara_fov",
+        "techpara_effmas",
+        "ct_recon_filter1",
+        "ct_recon_filter2",
+        "ctdxqual_breath",
+        "ctdxqual_motion",
+        "ctdxqual_resp",
+        "ctdxqual_techpara",
+        "ctdxqual_inadeqimg",
+        "ctdxqual_artifact",
+        "ctdxqual_graininess",
+        "ctdxqual_other",
+        "ct_recon_filter3",
+        "ct_recon_filter4"
+      ],
+      "unique_id_count": 6163
+    },
+    {
+      "path_relative_to_source_root": "data/metadata/patient_split.json",
+      "sha256": "58c8a8ddcc86fe7a296a7a7e3641f5a27162e50f048c05d6c5b602141ff884cf",
+      "bytes": 33983
+    },
+    {
+      "path_relative_to_source_root": "data/metadata/lndb_10to1_eval.csv",
+      "sha256": "15bc60b9e521be74cb69309ceb9163a588a74056947d8afb68a674b4e49e6ab0",
+      "bytes": 16875,
+      "rows": 814,
+      "columns": [
+        "FindingID",
+        "LNDbID",
+        "label",
+        "filename"
+      ],
+      "unique_id_count": 439
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/luna25_dl/files/stunet_base_warmup_test_preds.csv",
+      "sha256": "bff70b3a07b6d3815553e504c7d3ec10857ee4d8576f7a6f3d5ff2b78a21c3ea",
+      "bytes": 43033,
+      "rows": 917,
+      "columns": [
+        "split",
+        "AnnotationID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 917
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/luna25_dl/files/efficientnet_b0_baseline_test_preds.csv",
+      "sha256": "05a5b5751902312f1c9a767486ab6b944f88990e001482af00f87f565ab07e9c",
+      "bytes": 42896,
+      "rows": 917,
+      "columns": [
+        "split",
+        "AnnotationID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 917
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/luna25_dl/files/resnet18_baseline_test_preds.csv",
+      "sha256": "52898e77e3676edf6d34604effc613713f832bb3144a149a245413ca55adf83b",
+      "bytes": 42987,
+      "rows": 917,
+      "columns": [
+        "split",
+        "AnnotationID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 917
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/luna25_dl/files/densenet121_baseline_test_preds.csv",
+      "sha256": "2b637d0aea66611ea77018216a8c69c8e1391069c22d9d0413223630bc6a123e",
+      "bytes": 42884,
+      "rows": 917,
+      "columns": [
+        "split",
+        "AnnotationID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 917
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/luna25_dl/files/resnet50_baseline_test_preds.csv",
+      "sha256": "e6fc1f4f9e0ae9bb4d8a1c6c030d5e95b9b5d0ca29d19439b83fa1d84c12a85e",
+      "bytes": 42824,
+      "rows": 917,
+      "columns": [
+        "split",
+        "AnnotationID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 917
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/luna25_dl/files/swin_unetr_final_gpu_test_preds.csv",
+      "sha256": "6a5f8c6ea73e09fb77d1286ca0c0c8be0437978862c4d9f942360f2f6cdde680",
+      "bytes": 43130,
+      "rows": 917,
+      "columns": [
+        "split",
+        "AnnotationID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 917
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/luna25_dl/files/vit_baseline_test_preds.csv",
+      "sha256": "52812e7730aaabf2848c847939c4f904e7d334e22aeea54f15827de0029af173",
+      "bytes": 43516,
+      "rows": 917,
+      "columns": [
+        "split",
+        "AnnotationID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 917
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/lndb_dl/stunet_base_warmup_lndb_preds.csv",
+      "sha256": "f14cf7bd7bf50ae1387581990ce319bf106cab2297a1acbe2b38497439a6e427",
+      "bytes": 24082,
+      "rows": 814,
+      "columns": [
+        "FindingID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 439
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/lndb_dl/efficientnet_b0_baseline_lndb_preds.csv",
+      "sha256": "7f4702547b11989192c617a008387b3db40a3d0efbca7baa3e339270ee9d9fcf",
+      "bytes": 24036,
+      "rows": 814,
+      "columns": [
+        "FindingID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 439
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/lndb_dl/resnet18_baseline_lndb_preds.csv",
+      "sha256": "240adecf86da880b6c57de6672b8a8e1ead7f8dd10e9f39d3f166b678caecdf9",
+      "bytes": 23915,
+      "rows": 814,
+      "columns": [
+        "FindingID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 439
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/lndb_dl/densenet121_baseline_lndb_preds.csv",
+      "sha256": "411189b3b1e76221d8fdb9dad4d0a76e0bd7fecfac89de0875c5a0b69172df04",
+      "bytes": 23918,
+      "rows": 814,
+      "columns": [
+        "FindingID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 439
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/lndb_dl/resnet50_baseline_lndb_preds.csv",
+      "sha256": "c58fff0b802693d3b1bd27e1536f8a43401571ab88c5b05122f5220a2c45f357",
+      "bytes": 23876,
+      "rows": 814,
+      "columns": [
+        "FindingID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 439
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/lndb_dl/swin_unetr_final_gpu_lndb_preds.csv",
+      "sha256": "431b9b4a8ab5d9cb3270aacfa6ffd42a4d0a7d07bec2466bacba9e89203775b8",
+      "bytes": 24037,
+      "rows": 814,
+      "columns": [
+        "FindingID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 439
+    },
+    {
+      "path_relative_to_source_root": "data/predictions/lndb_dl/vit_baseline_lndb_preds.csv",
+      "sha256": "e99bb678fee51126fa71298ecbf55bfe6aa14f2e03ebf13790e93baa002265d8",
+      "bytes": 24403,
+      "rows": 814,
+      "columns": [
+        "FindingID",
+        "label",
+        "logit",
+        "pred_prob"
+      ],
+      "unique_id_count": 439
+    }
+  ],
+  "official_label_verification": {
+    "record": "LNDb Dataset v4",
+    "doi": "10.5281/zenodo.8348419",
+    "source_url": "https://zenodo.org/api/records/8348419/files/allNods.csv/content",
+    "official_sha256": "bfdb261199323f86ff2fb96b0ece785955f8c6198b3542c1d076a2a6e576c3b8",
+    "label_field": "allNods.Malignancy",
+    "aggregation": "Official average radiologist suspicion score used as supplied; no new reader averaging",
+    "thresholds": {
+      "negative_max_inclusive": 2,
+      "positive_min_inclusive": 4,
+      "intermediate_excluded": true
+    },
+    "unique_selected": 439,
+    "negative": 365,
+    "positive": 74,
+    "weighted_input_rows": 814,
+    "label_mismatch_n": 0,
+    "id_construction": "LNDbID + '_' + merged within-CT FindingID",
+    "original_sampling_reproduced": false,
+    "pathology_confirmation_established": false
+  },
+  "availability": "Model predictions are study-generated inputs, not downloads supplied by the dataset websites. Exact numerical reproduction requires the hash-matching private inputs; the public code and aggregate outputs alone do not reproduce patient-level results."
+}

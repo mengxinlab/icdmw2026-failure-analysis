@@ -47,7 +47,7 @@ def subgroup_rows(df: pd.DataFrame, family: str, values: pd.Series) -> list[dict
                 "subgroup_family": family,
                 "subgroup": level,
                 "n": n,
-                "malignant_n": int(sub["y_true"].sum()),
+                "positive_label_n": int(sub["y_true"].sum()),
                 "prevalence": float(sub["y_true"].mean()),
                 "consensus_error_rate": rate,
                 "consensus_error_ci_low": ci[0],
@@ -56,7 +56,8 @@ def subgroup_rows(df: pd.DataFrame, family: str, values: pd.Series) -> list[dict
                 "mean_disagreement_score": float(sub["std_p"].mean()),
                 "enrichment_ratio": rate / overall if overall else np.nan,
                 "p_value": pvalue,
-                "exploratory": int(sub["y_true"].sum()) < config.EXPLORATORY_MALIGNANT_N,
+                "exploratory": True,
+                "low_positive_count": int(sub["y_true"].sum()) < config.EXPLORATORY_MALIGNANT_N,
             }
         )
     return out
@@ -152,7 +153,7 @@ def fit_tree(df: pd.DataFrame) -> str:
                 "rule": " AND ".join(conditions) if conditions else "All cases",
                 "predicted_majority_failure_class": predicted,
                 "support_n": support,
-                "malignant_n": int(sub["y_true"].sum()),
+                "positive_label_n": int(sub["y_true"].sum()),
                 "consensus_failure_n": int(sub["consensus_error_majority"].sum()),
                 "consensus_failure_rate": rate,
                 "consensus_failure_ci_low": ci[0],

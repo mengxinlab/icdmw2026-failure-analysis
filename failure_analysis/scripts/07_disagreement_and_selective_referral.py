@@ -9,6 +9,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config
+from referral import persist_rankings, random_expected_row, referral_scores
 from utils import MODEL_SLUGS, binary_metrics, cluster_bootstrap_rate_ci, configure_matplotlib, load_behavior_table, save_figure_source, write_table
 
 configure_matplotlib()
@@ -44,21 +45,11 @@ def evaluate_auto_subset(sub: pd.DataFrame, *, seed: int) -> dict[str, float]:
 
 def main() -> None:
     df = load_behavior_table().reset_index(drop=True)
-    rng = np.random.default_rng(config.RANDOM_SEED)
-    strategies = {
-        "ensemble_margin": 0.5 - df["ensemble_margin"],
-        "STU-Net_margin": 0.5 - df[f"{MODEL_SLUGS['STU-Net']}_margin"],
-        "EfficientNet-B0_margin": 0.5 - df[f"{MODEL_SLUGS['EfficientNet-B0']}_margin"],
-        "mean_individual_margin": 0.5 - df[[f"{MODEL_SLUGS[m]}_margin" for m in config.MODEL_FILES]].mean(axis=1),
-        "std_p": df["std_p"],
-        "max_p_gap": df["max_p_gap"],
-        "vote_entropy": df["vote_entropy"],
-        "hard_case_score": df["hard_case_score"],
-        "random": pd.Series(rng.random(len(df))),
-    }
+    strategies = referral_scores(df, "LUNA25")
+    orders = persist_rankings(df, strategies, "LUNA25")
     rows = []
     for strategy, score in strategies.items():
-        order = score.sort_values(ascending=False).index.to_numpy()
+        order = orders[strategy]
         for pct in config.REFERRAL_PCTS:
             k = int(math.ceil(len(df) * pct / 100.0))
             referred_idx = set(order[:k])
@@ -67,7 +58,8 @@ def main() -> None:
             rows.append(
                 {
                     "referral_strategy": strategy,
-                    "deployment_eligible": strategy != "hard_case_score",
+                    "label_free": strategy != "hard_case_score",
+                    "statistic": "selected_subset",
                     "referral_pct": pct,
                     "referred_n": k,
                     "auto_n": len(auto),
@@ -75,6 +67,7 @@ def main() -> None:
                     **{k2: v for k2, v in metrics.items() if k2 not in ["coverage", "auto_n"]},
                 }
             )
+    rows.extend(random_expected_row(df, pct) for pct in config.REFERRAL_PCTS)
     table = pd.DataFrame(rows)
     write_table(table, config.TABLE_DIR / "table5_disagreement_selective_referral.csv")
 
@@ -99,7 +92,7 @@ def main() -> None:
         "STU-Net_margin",
         "EfficientNet-B0_margin",
         "vote_entropy",
-        "random",
+        "random_expected",
         "hard_case_score",
     ]
     for strategy in plot_strategies:

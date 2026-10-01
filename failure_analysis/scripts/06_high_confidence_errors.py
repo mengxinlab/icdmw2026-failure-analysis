@@ -62,7 +62,7 @@ def main() -> None:
                         "subgroup_family": family,
                         "subgroup": str(level),
                         "n": len(g),
-                        "malignant_n": int(g["y_true"].sum()),
+                        "positive_label_n": int(g["y_true"].sum()),
                         "hce_0.8_n": int((g["error"] & (g["confidence"] >= 0.8)).sum()),
                         "hce_0.8_rate": float((g["error"] & (g["confidence"] >= 0.8)).mean()),
                         "hce_0.9_n": int((g["error"] & (g["confidence"] >= 0.9)).sum()),

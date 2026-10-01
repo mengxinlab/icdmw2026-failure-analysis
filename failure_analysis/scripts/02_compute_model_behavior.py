@@ -29,6 +29,11 @@ def main() -> None:
         pred["model"] = model
         label_frames.append(pred[["case_id", "y_true", "model"]])
     labels = pd.concat(label_frames, ignore_index=True)
+    if labels.groupby("case_id")["y_true"].nunique().gt(1).any():
+        raise ValueError("Model labels disagree")
+    id_sets = [set(g["case_id"]) for _, g in labels.groupby("model")]
+    if any(ids != id_sets[0] for ids in id_sets[1:]):
+        raise ValueError("Model ID sets disagree")
     label_by_case = labels.sort_values("model").drop_duplicates("case_id")[["case_id", "y_true"]]
 
     keep_meta_cols = [

@@ -31,7 +31,7 @@ def main() -> None:
         ensemble = perf[perf["model"].eq("Ensemble mean")]
         key_lines.append(
             f"- Best internal LUNA25 ROC-AUC was {fmt_float(best['roc_auc'])} for {best['model']} "
-            f"(95% stratified bootstrap CI {fmt_float(best['roc_auc_ci_low'])}-{fmt_float(best['roc_auc_ci_high'])})."
+            f"(95% patient-clustered bootstrap CI {fmt_float(best['patient_cluster_auc_ci_low'])}-{fmt_float(best['patient_cluster_auc_ci_high'])})."
         )
         if len(ensemble):
             e = ensemble.iloc[0]
@@ -64,14 +64,14 @@ def main() -> None:
     if len(referral):
         at20 = referral[referral["referral_pct"].eq(20)]
         if len(at20):
-            eligible = at20[at20.get("deployment_eligible", True).astype(bool)] if "deployment_eligible" in at20 else at20
+            eligible = at20[at20["label_free"].astype(bool) & ~at20["referral_strategy"].str.startswith("random")]
             best = eligible.sort_values("auto_error_rate").iloc[0]
-            rnd = at20[at20["referral_strategy"].eq("random")]
+            rnd = at20[at20["referral_strategy"].eq("random_expected")]
             random_text = ""
             if len(rnd):
-                random_text = f"; random referral error rate was {fmt_float(rnd.iloc[0]['auto_error_rate'])}"
+                random_text = f"; analytical random-referral expected error was {fmt_float(rnd.iloc[0]['auto_error_rate'])}"
             key_lines.append(
-                f"- At 20% simulated referral among deployment-eligible uncertainty rules, the lowest auto-handled error rate "
+                f"- At 20% simulated referral among label-free uncertainty rules, the lowest auto-handled error rate "
                 f"was {fmt_float(best['auto_error_rate'])} using {best['referral_strategy']} at coverage "
                 f"{fmt_float(best['coverage'])}{random_text}."
             )
@@ -93,11 +93,11 @@ def main() -> None:
     if len(external_referral) and "referral_pct" in external_referral:
         at20 = external_referral[external_referral["referral_pct"].eq(20)]
         if len(at20):
-            best = at20.sort_values("auto_error_rate").iloc[0]
-            rnd = at20[at20["referral_strategy"].eq("random")]
+            best = at20[~at20["referral_strategy"].str.startswith("random")].sort_values("auto_error_rate").iloc[0]
+            rnd = at20[at20["referral_strategy"].eq("random_expected")]
             random_text = ""
             if len(rnd):
-                random_text = f"; random referral error rate was {fmt_float(rnd.iloc[0]['auto_error_rate'])}"
+                random_text = f"; analytical random-referral expected error was {fmt_float(rnd.iloc[0]['auto_error_rate'])}"
             key_lines.append(
                 f"- On LNDb at 20% simulated referral, the lowest label-free auto-handled error rate was "
                 f"{fmt_float(best['auto_error_rate'])} using {best['referral_strategy']} at coverage "
@@ -110,7 +110,7 @@ def main() -> None:
         "We performed a retrospective failure-mining audit of stored 3D deep-learning predictions for "
         "LUNA25 lung nodule malignancy classification. Per-annotation malignant probabilities from STU-Net, "
         "EfficientNet-B0, ResNet-18, DenseNet-121, ResNet-50, Swin-UNETR, and ViT-Base were merged with "
-        "clinical metadata using AnnotationID, with y_true=1 denoting malignant disease. Model behavior was "
+        "clinical metadata using AnnotationID, with y_true=1 denoting the benchmark positive label. Model behavior was "
         "summarized by per-model errors, nominal confidence, high-probability errors, error co-occurrence, ensemble mean "
         "probability, vote entropy, probability dispersion, and majority consensus failure. We computed ROC-AUC, "
         "PR-AUC, accuracy, sensitivity, specificity, F1, balanced accuracy, Brier score, expected calibration "
@@ -141,10 +141,10 @@ def main() -> None:
             "",
             "- The analysis is retrospective and uses public benchmark-derived tabular artifacts rather than a prospective clinical workflow.",
             "- LUNA25 labels are benchmark curation labels and may not capture all sources of diagnostic uncertainty.",
-            "- Several metadata-defined subgroups have small malignant counts; those findings are exploratory.",
+            "- All mined subgroups are exploratory, with extra uncertainty for small positive-label counts.",
             "- Failure mining is descriptive and does not prove causal mechanisms for model errors.",
             "- The hard_case_score includes observed model errors and should not be interpreted as a deployable referral policy.",
-            "- Selective-referral simulation assumes perfect downstream review and does not replace prospective clinical evaluation.",
+            "- Detection upper bounds alone assume perfect downstream review; referral error metrics do not model expert diagnosis.",
             "- External validation is limited to the available LNDb prediction tables and may not cover all acquisition shifts.",
         ]
     )
