@@ -1,6 +1,6 @@
 # Camera-ready artifact scope
 
-Version: `camera-ready-2026-10-02`. This release provides reusable analysis
+Version: `camera-ready-2026-10-02-r1`. This release provides reusable analysis
 code and aggregate evidence, not a complete end-to-end reproduction package.
 
 ## Inputs and target definitions
@@ -72,6 +72,17 @@ optimal oracle bound or a clinical policy.
 
 Install `failure_analysis/requirements.lock.txt`, set
 `FAILURE_ANALYSIS_SOURCE_ROOT`, then run `python failure_analysis/run_all.py`.
+This is the study-specific entry point and requires both LUNA25 and LNDb
+inputs. Reuse on other prediction tables requires configuration of the input
+schema and applicable audit modules; downstream external-dependent modules
+are not made optional by script 09's conditional availability check.
 For an offline official LNDb file, set `FAILURE_ANALYSIS_LNDB_OFFICIAL_CSV`.
 The input hash is validated. Script 15 generates the camera-ready table rows
 from canonical CSVs. See the pipeline README and data dictionary for schemas.
+
+The legacy aggregate fields `pr_auc`/`external_pr_auc` are average precision
+(AP), not trapezoidal PR area. ECE bins positive-class probability in 10
+equal-width bins and weights calibration gaps by bin size. The Spearman
+coefficient across seven models is descriptive; the manuscript does not report
+the asymptotic p value stored in historical aggregate outputs. This revision
+changes definitions, documentation and interpretation, not numerical results.

@@ -29,6 +29,14 @@ From the project root:
 python failure_analysis/run_all.py
 ```
 
+`run_all.py` is the study-specific reproduction entry point and requires both
+LUNA25 and LNDb inputs, including the metadata and split files used by the
+manifest. It runs LNDb label verification before analysis; external validation
+is not optional in this full entry point. Reuse on other prediction tables
+requires configuring the input schema and running the applicable audit modules.
+The conditional skip inside script 09 alone does not make downstream
+class-specific, sensitivity, manifest, or table-generation modules optional.
+
 Outputs are written under `failure_analysis/outputs/`. Raw files in the source
 repository configured by `SOURCE_ROOT` in `failure_analysis/config.py` are
 read-only inputs and are never modified. By default, `SOURCE_ROOT` points to
@@ -62,6 +70,7 @@ public release's `ARTIFACTS.md` and `aggregate/input_manifest.json`.
 - `y_true` -> benchmark `label` (1 positive, 0 negative); the released
   annotation table alone does not provide lesion-level pathology records
 - `p_malignant` -> each model prediction file's `pred_prob`
+
 - `age` -> `Age_at_StudyDate`
 - `sex` -> `Gender`
 - `size_mm` -> `sct_long_dia`
@@ -69,6 +78,12 @@ public release's `ARTIFACTS.md` and `aggregate/input_manifest.json`.
 - `margin` -> `sct_margins`
 - `lobe_or_location` -> `sct_epi_loc`
 - `smoking_status` -> `cigsmok`
+
+Metric naming: the legacy CSV keys `pr_auc` and `external_pr_auc` store
+scikit-learn `average_precision_score`, reported as AP in the manuscript
+(not trapezoidal PR-curve area). ECE uses 10 equal-width bins of positive-class
+probability, with bin-size-weighted absolute differences between mean
+probability and positive-label frequency; it does not bin `max(p, 1-p)`.
 
 ## Scripts
 
