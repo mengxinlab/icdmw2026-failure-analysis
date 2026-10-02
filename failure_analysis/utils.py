@@ -175,6 +175,24 @@ def model_prediction_path(model_name: str) -> Path:
     return config.LUNA25_DL_DIR / filename
 
 
+def require_patient_mapping(case_ids: Iterable[str], metadata: pd.DataFrame) -> pd.DataFrame:
+    """Require complete case-to-patient mapping; optional covariates may be missing."""
+    if not {"case_id", "patient_id"}.issubset(metadata.columns):
+        raise ValueError("Every prediction case requires metadata with case_id and patient_id")
+    expected = set(case_ids)
+    matched = metadata[metadata["case_id"].isin(expected)].copy()
+    missing_n = len(expected - set(matched["case_id"]))
+    patients = pd.to_numeric(matched["patient_id"], errors="coerce")
+    invalid = patients.isna() | ~np.isfinite(patients.astype(float)) | patients.mod(1).ne(0)
+    if missing_n or invalid.any() or matched["case_id"].duplicated().any():
+        raise ValueError(
+            "Every prediction case must have one metadata row with a valid patient_id "
+            f"for patient-clustered analyses (missing rows={missing_n}, "
+            f"invalid patient mappings={int(invalid.sum())})."
+        )
+    return matched
+
+
 def load_model_predictions(model_name: str) -> pd.DataFrame:
     path = model_prediction_path(model_name)
     if not path.exists():

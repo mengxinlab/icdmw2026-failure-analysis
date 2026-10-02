@@ -37,7 +37,12 @@ requires configuring the input schema and running the applicable audit modules.
 The conditional skip inside script 09 alone does not make downstream
 class-specific, sensitivity, manifest, or table-generation modules optional.
 
-Outputs are written under `failure_analysis/outputs/`. Raw files in the source
+Outputs are written under `failure_analysis/outputs/`.
+Patient-clustered modules require a metadata row and valid patient ID for every
+prediction case; missing mappings fail before cohort/split checks or metrics.
+Missing optional diameter/density fields are retained and reported, not dropped.
+
+Raw files in the source
 repository configured by `SOURCE_ROOT` in `failure_analysis/config.py` are
 read-only inputs and are never modified. By default, `SOURCE_ROOT` points to
 a sibling `VLMvsDL` directory; set `FAILURE_ANALYSIS_SOURCE_ROOT` to the
@@ -86,6 +91,26 @@ probability, with bin-size-weighted absolute differences between mean
 probability and positive-label frequency; it does not bin `max(p, 1-p)`.
 
 ## Scripts
+
+### Final manuscript figures
+
+After `run_all.py`, run from the project root:
+
+```bash
+python failure_analysis/replot_figures_tnr.py
+```
+
+This public renderer uses exported source CSVs and aggregate tables without
+recomputing statistics. It produces the final Fig. 2 co-error heatmap
+(`fig1_error_cooccurrence_heatmap.pdf`) and Fig. 3 risk-coverage curve
+(`fig4_risk_coverage_curve.pdf`), with compact model abbreviations and formatted
+legends. Fig. 3 shows five curves; EfficientNet-B0 margin remains in Table III
+and full CSV outputs. The base pipeline plots are diagnostic, not identical
+presentation layouts. PNG/PDF outputs overwrite the local figure derivatives
+and copy to `manuscript_icdm/figures` only when that directory exists.
+Generated summary prose from script 10 is a review draft, not manuscript source.
+
+### Analysis modules
 
 1. `01_load_and_validate.py`: inventories inputs and validates labels,
    probability ranges, metadata availability, and patient clustering.

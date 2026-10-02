@@ -8,7 +8,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config
-from utils import MODEL_SLUGS, ensure_output_dirs, load_model_predictions, load_luna25_metadata, vote_entropy, write_table
+from utils import MODEL_SLUGS, ensure_output_dirs, load_model_predictions, load_luna25_metadata, require_patient_mapping, vote_entropy, write_table
 
 
 def normalize(series: pd.Series) -> pd.Series:
@@ -35,6 +35,7 @@ def main() -> None:
     if any(ids != id_sets[0] for ids in id_sets[1:]):
         raise ValueError("Model ID sets disagree")
     label_by_case = labels.sort_values("model").drop_duplicates("case_id")[["case_id", "y_true"]]
+    meta = require_patient_mapping(label_by_case["case_id"], meta)
 
     keep_meta_cols = [
         "case_id",

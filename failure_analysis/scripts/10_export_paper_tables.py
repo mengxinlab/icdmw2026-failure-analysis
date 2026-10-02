@@ -113,13 +113,21 @@ def main() -> None:
         "clinical metadata using AnnotationID, with y_true=1 denoting the benchmark positive label. Model behavior was "
         "summarized by per-model errors, nominal confidence, high-probability errors, error co-occurrence, ensemble mean "
         "probability, vote entropy, probability dispersion, and majority consensus failure. We computed ROC-AUC, "
-        "PR-AUC, accuracy, sensitivity, specificity, F1, balanced accuracy, Brier score, expected calibration "
-        "error, stratified bootstrap confidence intervals, patient-cluster AUC intervals, McNemar tests, "
+        "average precision (AP; average_precision_score), accuracy, sensitivity, specificity, F1, balanced accuracy, "
+        "Brier score, and ECE using 10 equal-width bins of positive-class probability, weighted by bin size, "
+        "not bins of nominal confidence. We computed stratified bootstrap confidence intervals, "
+        "patient-cluster AUC intervals, McNemar tests, "
         "patient-clustered subgroup/referral rate intervals, interpretable decision-tree rules, subgroup enrichment "
         "statistics, and selective-referral risk-coverage curves. The hard_case_score was treated as a retrospective audit score because it includes observed error counts. "
-        "External LNDb prediction files were analyzed with both discrimination metrics and label-free referral simulations when available."
+        "LNDb was audited against the official v4 average radiologist-suspicion score: scores <=2 were "
+        "negative proxy labels, scores >=4 positive proxy labels, and intermediate scores excluded. "
+        "These are not pathology-confirmed cancer outcomes. Selected LNDb prediction files were analyzed "
+        "with discrimination metrics and label-free referral simulations; original ROI selection and "
+        "checkpoint execution were not reconstructed. The full run_all.py entry point requires both cohorts."
     )
-    write_text(config.PAPER_SUMMARY_DIR / "methods_paragraph.md", methods + "\n")
+    write_text(config.PAPER_SUMMARY_DIR / "methods_paragraph.md",
+               "# Generated methods draft\n\nFor inspection only; the final manuscript's definitions govern. "
+               "Do not overwrite the final manuscript with this generated summary.\n\n" + methods + "\n")
 
     result_bits = []
     if len(perf):

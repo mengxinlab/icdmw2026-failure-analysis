@@ -1,6 +1,6 @@
 # Camera-ready artifact scope
 
-Version: `camera-ready-2026-10-02-r1`. This release provides reusable analysis
+Version: `camera-ready-2026-10-02-r2`. This release provides reusable analysis
 code and aggregate evidence, not a complete end-to-end reproduction package.
 
 ## Inputs and target definitions
@@ -86,3 +86,13 @@ equal-width bins and weights calibration gaps by bin size. The Spearman
 coefficient across seven models is descriptive; the manuscript does not report
 the asymptotic p value stored in historical aggregate outputs. This revision
 changes definitions, documentation and interpretation, not numerical results.
+
+The r2 release hardens case-to-patient mapping checks before analysis and
+documents the final public figure renderer. Missing case metadata rows or
+invalid patient IDs cause an error; missing optional covariates remain allowed.
+Generated method prose is an inspection draft, never a manuscript replacement.
+Final figure command after the study pipeline:
+`python failure_analysis/replot_figures_tnr.py`. It formats the co-error heatmap
+and five-curve risk-coverage plot used in the paper from existing aggregate
+sources; base pipeline plots are diagnostic layouts. All referral strategies
+remain available in the full CSVs and tables.

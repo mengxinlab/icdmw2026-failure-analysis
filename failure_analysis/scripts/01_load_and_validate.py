@@ -8,7 +8,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config
-from utils import ensure_output_dirs, load_all_luna_predictions_long, load_luna25_metadata, model_prediction_path, write_table, write_text
+from utils import ensure_output_dirs, load_all_luna_predictions_long, load_luna25_metadata, model_prediction_path, require_patient_mapping, write_table, write_text
 
 
 def file_inventory() -> pd.DataFrame:
@@ -43,7 +43,7 @@ def main() -> None:
     meta = load_luna25_metadata()
     preds = load_all_luna_predictions_long()
     case_ids = sorted(preds["case_id"].unique())
-    test_meta = meta[meta["case_id"].isin(case_ids)].copy()
+    test_meta = require_patient_mapping(case_ids, meta)
 
     checks.append(
         {
@@ -116,7 +116,7 @@ def main() -> None:
     checks.append(
         {
             "check": "metadata_available_for_prediction_cases",
-            "status": "PASS" if missing_meta == 0 else "WARN",
+            "status": "PASS" if missing_meta == 0 else "FAIL",
             "detail": f"{missing_meta} prediction cases missing from clinical metadata",
         }
     )

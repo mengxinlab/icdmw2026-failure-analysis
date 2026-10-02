@@ -1,27 +1,20 @@
 #!/usr/bin/env python3
 """Re-render the manuscript figures with Times New Roman + consecutive numbers.
 
-This is a stopgap renderer. It reproduces each figure *exactly* from the
-``*_source.csv`` files the pipeline already exported under
-``outputs/figures/`` (so no statistics are recomputed and no manuscript number
-changes), but (a) applies the Times New Roman font, (b) writes the figures with
-the consecutive manuscript numbering (the unused disagreement plot no longer
-occupies ``fig3``), and (c) differentiates the risk-coverage line series by
-marker + linestyle so they survive grayscale printing and color-blind readers.
+Run after ``run_all.py``. This final presentation renderer uses exported
+source CSVs and aggregate tables, without recomputing statistics. It formats
+the manuscript co-error heatmap and five-curve risk-coverage plot with compact
+labels, readable column-width text and grayscale-distinguishable line styles.
 
 It depends only on numpy/pandas/matplotlib (not scipy/sklearn), so it runs even
 when those compiled libraries are unavailable. Both PNG and vector PDF are
-written, and both are copied to ``../manuscript_icdm/figures/`` (the manuscript
-now includes the PDF versions).
+written, and copied to ``../manuscript_icdm/figures/`` only if that directory
+exists. The manuscript includes the PDF versions. Local output figure
+derivatives are overwritten, but raw inputs and aggregate CSVs are untouched.
 
-Source CSV (old pipeline name) -> output figure (new consecutive name):
-    fig1_error_cooccurrence_heatmap          -> fig1_error_cooccurrence_heatmap
-    fig2_consensus_failure_by_subgroup       -> fig2_consensus_failure_by_subgroup
-    fig4_high_confidence_error_rates         -> fig3_high_confidence_error_rates
-    fig5_risk_coverage_curve                 -> fig4_risk_coverage_curve
-    fig6_architecture_specific_failure_...   -> fig5_architecture_specific_failure_...
-    fig7_external_shift_if_available         -> fig6_external_shift_if_available
-    fig8_lndb_risk_coverage_curve            -> fig7_lndb_risk_coverage_curve
+File numbering retains historical pipeline names: manuscript Fig. 2 is
+``fig1_error_cooccurrence_heatmap.pdf`` and manuscript Fig. 3 is
+``fig4_risk_coverage_curve.pdf``. The workflow diagram is authored in LaTeX.
 """
 from __future__ import annotations
 

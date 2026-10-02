@@ -15,6 +15,7 @@ from utils import (
     mcnemar_exact_pvalue,
     model_names_with_ensemble,
     probability_column_for_model,
+    require_patient_mapping,
     stratified_bootstrap_ci,
     write_table,
 )
@@ -22,6 +23,7 @@ from utils import (
 
 def main() -> None:
     df = load_behavior_table()
+    require_patient_mapping(df["case_id"], df)
     rows = []
     for i, model in enumerate(model_names_with_ensemble()):
         p_col = probability_column_for_model(model)
