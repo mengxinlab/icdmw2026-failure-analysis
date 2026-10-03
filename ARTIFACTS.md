@@ -1,6 +1,6 @@
 # Camera-ready artifact scope
 
-Version: `camera-ready-2026-10-02-r2`. This release provides reusable analysis
+Version: `camera-ready-2026-10-03-r3`. This release provides reusable analysis
 code and aggregate evidence, not a complete end-to-end reproduction package.
 
 ## Inputs and target definitions
@@ -96,3 +96,7 @@ Final figure command after the study pipeline:
 and five-curve risk-coverage plot used in the paper from existing aggregate
 sources; base pipeline plots are diagnostic layouts. All referral strategies
 remain available in the full CSVs and tables.
+
+The r3 release changes only the manuscript Figure 3 presentation: its legend
+is above the axes in two columns and the canvas is slightly taller. Its curves,
+source CSVs, and all numerical results are unchanged from r2.

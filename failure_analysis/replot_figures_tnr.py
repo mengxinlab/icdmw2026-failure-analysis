@@ -78,8 +78,10 @@ def set_times_new_roman() -> None:
 
 def _save(fig, name: str) -> None:
     out_png = FIG_SRC / name
-    fig.savefig(out_png, bbox_inches="tight")
-    fig.savefig(out_png.with_suffix(".pdf"), bbox_inches="tight")
+    # Save Fig. 3's fixed canvas, including its separate legend band.
+    bbox = fig.bbox_inches if name == "fig4_risk_coverage_curve.png" else "tight"
+    fig.savefig(out_png, bbox_inches=bbox)
+    fig.savefig(out_png.with_suffix(".pdf"), bbox_inches=bbox)
     plt.close(fig)
     if MANU_FIG.is_dir():
         shutil.copyfile(out_png, MANU_FIG / name)
@@ -164,8 +166,17 @@ def _risk_coverage(source_csv: str, out_name: str, strategies: list[str], title:
     ax.set_xlabel("Auto-handled coverage", fontsize=9)
     ax.set_ylabel("Auto-handled error", fontsize=9)
     ax.tick_params(labelsize=8)
-    ax.legend(frameon=False, fontsize=7, loc="upper left")
-    fig.tight_layout()
+    if out_name == "fig4_risk_coverage_curve.png":
+        fig.set_size_inches(244.287 / 72, 190.829 / 72)
+        # Reserve a separate legend band for manuscript Fig. 3; no legend
+        # entry may obscure a curve, including the random baseline.
+        fig.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=7,
+                   loc="upper center", bbox_to_anchor=(0.55, 1.0), ncol=2,
+                   columnspacing=0.9, handlelength=2.0)
+        fig.tight_layout(rect=(0, 0, 1, 0.80))
+    else:
+        ax.legend(frameon=False, fontsize=7, loc="upper left")
+        fig.tight_layout()
     _save(fig, out_name)
 
 
